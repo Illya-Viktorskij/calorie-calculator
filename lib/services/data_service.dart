@@ -87,6 +87,12 @@ class DataService {
     await saveDailyLog(updatedLog);
   }
 
+  Future<void> setWater(double liters) async {
+    final todayLog = await getTodayLog();
+    final updatedLog = todayLog.copyWith(waterIntake: liters);
+    await saveDailyLog(updatedLog);
+  }
+
   String _getDateKey(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }

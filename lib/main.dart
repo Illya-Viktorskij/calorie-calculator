@@ -39,12 +39,13 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
   final GlobalKey<HomeScreenState> _homeKey = GlobalKey<HomeScreenState>();
+  final GlobalKey<HistoryScreenState> _historyKey = GlobalKey<HistoryScreenState>();
 
   // Screens: 0=Home, 1=Add, 2=History, 3=Profile
   List<Widget> get _screens => [
         HomeScreen(key: _homeKey),
         AddScreen(onBackPressed: () => _onIndexChanged(0)),
-        HistoryScreen(onBackPressed: () => _onIndexChanged(0)),
+        HistoryScreen(key: _historyKey, onBackPressed: () => _onIndexChanged(0)),
         ProfileScreen(onBackPressed: () => _onIndexChanged(0)),
       ];
 
@@ -79,6 +80,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget _buildNavBar() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         // Me button
         _buildNavButton(
@@ -87,13 +89,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           index: 3,
           onTap: () => _onIndexChanged(3),
         ),
-        // Add button
-        _buildNavButton(
-          icon: Icons.add_circle,
-          label: '+',
-          index: 1,
-          onTap: () => _onIndexChanged(1),
-        ),
+        // Add button (neon, bigger, centered)
+        _buildNeonAddButton(),
         // History button
         _buildNavButton(
           icon: Icons.history,
@@ -105,12 +102,60 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  Widget _buildNeonAddButton() {
+    const neonGreen = Color(0xFF39FF14);
+    
+    return GestureDetector(
+      onTap: () => _onIndexChanged(1),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            // Outer glow
+            BoxShadow(
+              color: neonGreen.withOpacity(0.4),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+            // Inner glow
+            BoxShadow(
+              color: neonGreen.withOpacity(0.6),
+              blurRadius: 10,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.grey[900],
+            border: Border.all(
+              color: neonGreen,
+              width: 2,
+            ),
+          ),
+          child: const Icon(
+            Icons.add,
+            color: neonGreen,
+            size: 32,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _onIndexChanged(int newIndex) {
     setState(() {
       _currentIndex = newIndex;
       // Refresh home screen when switching back to it
       if (newIndex == 0) {
         _homeKey.currentState?.refresh();
+      }
+      // Refresh history screen when switching to it
+      if (newIndex == 2) {
+        _historyKey.currentState?.refresh();
       }
     });
   }

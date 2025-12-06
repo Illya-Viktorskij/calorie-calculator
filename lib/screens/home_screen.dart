@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:math' as math;
 import '../services/data_service.dart';
 import '../models/user_profile.dart';
 import '../models/daily_log.dart';
@@ -13,16 +12,34 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => HomeScreenState();
 }
 
-class HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final DataService _dataService = DataService();
   DailyLog? _todayLog;
   UserProfile? _profile;
   bool _isLoading = true;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    
+    // Pulsating animation
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+    
+    _pulseAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+  
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -45,101 +62,145 @@ class HomeScreenState extends State<HomeScreen> {
 
   void _showFoodEntriesSheet(BuildContext context) {
     final entries = _todayLog?.foodEntries ?? [];
+    final waterIntake = _todayLog?.waterIntake ?? 0.0;
     
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[900],
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[700],
-                  borderRadius: BorderRadius.circular(2),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) => Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[700],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              // Title
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    const Icon(Icons.restaurant_menu, color: Colors.green),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Today\'s Food',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${entries.length} items',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.grey, height: 1),
-              // Food entries list
-              Expanded(
-                child: entries.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.no_food,
-                              size: 64,
-                              color: Colors.grey[700],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No food added today',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Tap + to add food',
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                // Title
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.restaurant_menu, color: Colors.green),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Today\'s Food',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                      )
-                    : ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: entries.length,
-                        itemBuilder: (context, index) {
-                          final entry = entries[index];
-                          return _buildFoodEntryTile(context, entry);
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${entries.length} items',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Water intake section
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.water_drop, color: Colors.blue, size: 24),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Water Intake',
+                            style: TextStyle(color: Colors.blue, fontSize: 12),
+                          ),
+                          Text(
+                            '${waterIntake.toStringAsFixed(1)} L',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showEditWaterDialog(context, waterIntake);
                         },
                       ),
-              ),
-            ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Food entries list
+                Expanded(
+                  child: entries.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.no_food,
+                                size: 64,
+                                color: Colors.grey[700],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No food added today',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap + to add food',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: entries.length,
+                          itemBuilder: (context, index) {
+                            final entry = entries[index];
+                            return _buildFoodEntryTile(context, entry);
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -344,6 +405,84 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showEditWaterDialog(BuildContext context, double currentWater) {
+    final waterController = TextEditingController(text: currentWater.toStringAsFixed(1));
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Row(
+          children: [
+            Icon(Icons.water_drop, color: Colors.blue),
+            SizedBox(width: 12),
+            Text(
+              'Edit Water Intake',
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the total amount of water for today',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: waterController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
+              style: const TextStyle(color: Colors.white, fontSize: 24),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[800],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                suffixText: 'L',
+                suffixStyle: const TextStyle(color: Colors.blue, fontSize: 20),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newWater = double.tryParse(waterController.text) ?? currentWater;
+              await _dataService.setWater(newWater);
+              if (mounted) {
+                Navigator.pop(context);
+                _loadData();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Water intake updated to ${newWater.toStringAsFixed(1)} L'),
+                    backgroundColor: Colors.blue,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -359,9 +498,8 @@ class HomeScreenState extends State<HomeScreen> {
 
     final calorieLimit = _profile?.calorieLimit ?? 2000.0;
     final totalCalories = _todayLog?.totalCalories ?? 0.0;
-    final progress = totalCalories / calorieLimit;
+    final progress = (totalCalories / calorieLimit).clamp(0.0, 1.0);
     final isExceeded = totalCalories > calorieLimit;
-    final exceededProgress = isExceeded ? (totalCalories - calorieLimit) / calorieLimit : 0.0;
 
     final waterIntake = _todayLog?.waterIntake ?? 0.0;
     final weight = _profile?.weight;
@@ -376,96 +514,109 @@ class HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 24),
-                // Circular Progress Indicator at top (clickable)
+                // Circular Progress Indicator at top (clickable) with neon glow
                 GestureDetector(
                   onTap: () => _showFoodEntriesSheet(context),
-                  child: SizedBox(
-                    width: 180,
-                    height: 180,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Background circle
-                        Container(
-                          width: 180,
-                          height: 180,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.grey[900],
-                          ),
-                        ),
-                        // Progress circle (green when under limit)
-                        if (!isExceeded)
-                          SizedBox(
-                            width: 180,
-                            height: 180,
-                            child: CircularProgressIndicator(
-                              value: progress.clamp(0.0, 1.0),
-                              strokeWidth: 14,
-                              backgroundColor: Colors.grey[800],
-                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-                              strokeCap: StrokeCap.round,
+                  child: AnimatedBuilder(
+                    animation: _pulseAnimation,
+                    builder: (context, child) {
+                      final neonColor = isExceeded 
+                          ? const Color(0xFFFF073A) // Neon red
+                          : const Color(0xFF39FF14); // Neon green
+                      
+                      return Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            // Outer glow
+                            BoxShadow(
+                              color: neonColor.withOpacity(0.3 * _pulseAnimation.value),
+                              blurRadius: 30,
+                              spreadRadius: 5,
                             ),
-                          ),
-                        // Red progress circle (when exceeded)
-                        if (isExceeded)
-                          SizedBox(
-                            width: 180,
-                            height: 180,
-                            child: CircularProgressIndicator(
-                              value: 1.0,
-                              strokeWidth: 14,
-                              backgroundColor: Colors.grey[800],
-                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
-                              strokeCap: StrokeCap.round,
-                            ),
-                          ),
-                        // Exceeded amount indicator (red, continues beyond circle, max 25% extra)
-                        if (isExceeded && exceededProgress > 0)
-                          Transform.rotate(
-                            angle: -math.pi / 2,
-                            child: SizedBox(
-                              width: 180,
-                              height: 180,
-                              child: CustomPaint(
-                                painter: ExceededProgressPainter(
-                                  progress: exceededProgress.clamp(0.0, 0.25),
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ),
-                          ),
-                        // Center content
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              totalCalories.toStringAsFixed(0),
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const Text(
-                              'calories',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '/ ${calorieLimit.toStringAsFixed(0)}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isExceeded ? Colors.red : Colors.green,
-                              ),
+                            // Inner glow
+                            BoxShadow(
+                              color: neonColor.withOpacity(0.5 * _pulseAnimation.value),
+                              blurRadius: 15,
+                              spreadRadius: 2,
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                        child: SizedBox(
+                          width: 180,
+                          height: 180,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Background circle
+                              Container(
+                                width: 180,
+                                height: 180,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.grey[900],
+                                ),
+                              ),
+                              // Progress circle with neon effect
+                              SizedBox(
+                                width: 180,
+                                height: 180,
+                                child: CircularProgressIndicator(
+                                  value: progress,
+                                  strokeWidth: 14,
+                                  backgroundColor: Colors.grey[800],
+                                  valueColor: AlwaysStoppedAnimation<Color>(neonColor),
+                                  strokeCap: StrokeCap.round,
+                                ),
+                              ),
+                              // Center content
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    totalCalories.toStringAsFixed(0),
+                                    style: TextStyle(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      shadows: [
+                                        Shadow(
+                                          color: neonColor.withOpacity(0.8),
+                                          blurRadius: 10,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    'calories',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '/ ${calorieLimit.toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: neonColor,
+                                      shadows: [
+                                        Shadow(
+                                          color: neonColor.withOpacity(0.6),
+                                          blurRadius: 8,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -570,42 +721,6 @@ class HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
-}
-
-class ExceededProgressPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-
-  ExceededProgressPainter({required this.progress, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 20
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 10;
-
-    // Draw the exceeded portion (starts from top and goes clockwise)
-    final startAngle = -math.pi / 2;
-    final sweepAngle = 2 * math.pi * progress;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      sweepAngle,
-      false,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(ExceededProgressPainter oldDelegate) {
-    return oldDelegate.progress != progress;
   }
 }
 

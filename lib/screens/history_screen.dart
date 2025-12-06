@@ -9,10 +9,10 @@ class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key, this.onBackPressed});
 
   @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
+  State<HistoryScreen> createState() => HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class HistoryScreenState extends State<HistoryScreen> {
   final DataService _dataService = DataService();
   Map<String, DailyLog> _dailyLogs = {};
   UserProfile? _profile;
@@ -21,6 +21,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
+    _loadHistory();
+  }
+
+  void refresh() {
     _loadHistory();
   }
 
@@ -102,17 +106,42 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     final log = _dailyLogs[dateKey]!;
                     final totalCalories = log.totalCalories;
                     final isExceeded = totalCalories > calorieLimit;
+                    final isToday = _formatDate(log.date) == 'Today';
 
                     return Card(
                       color: Colors.grey[900],
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ExpansionTile(
-                        title: Text(
-                          _formatDate(log.date),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        leading: isToday
+                            ? const Icon(Icons.edit, color: Colors.green, size: 20)
+                            : Icon(Icons.lock_outline, color: Colors.grey[600], size: 20),
+                        title: Row(
+                          children: [
+                            Text(
+                              _formatDate(log.date),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (isToday)
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'Active',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,6 +206,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 ),
                               );
                             }),
+                          if (isToday && log.foodEntries.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                'Tap the circle on Home to edit today\'s entries',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     );
