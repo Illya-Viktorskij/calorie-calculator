@@ -4,11 +4,13 @@ class DailyLog {
   final DateTime date;
   final List<FoodEntry> foodEntries;
   final double waterIntake; // in liters
+  final double calorieLimit; // the calorie limit that was set on this day
 
   DailyLog({
     required this.date,
     required this.foodEntries,
     this.waterIntake = 0.0,
+    required this.calorieLimit,
   });
 
   double get totalCalories {
@@ -20,6 +22,7 @@ class DailyLog {
       'date': date.toIso8601String(),
       'foodEntries': foodEntries.map((e) => e.toJson()).toList(),
       'waterIntake': waterIntake,
+      'calorieLimit': calorieLimit,
     };
   }
 
@@ -31,6 +34,7 @@ class DailyLog {
               .toList() ??
           [],
       waterIntake: json['waterIntake']?.toDouble() ?? 0.0,
+      calorieLimit: json['calorieLimit']?.toDouble() ?? 2000.0, // Default to 2000 for old logs
     );
   }
 
@@ -38,11 +42,13 @@ class DailyLog {
     DateTime? date,
     List<FoodEntry>? foodEntries,
     double? waterIntake,
+    double? calorieLimit,
   }) {
     return DailyLog(
       date: date ?? this.date,
       foodEntries: foodEntries ?? this.foodEntries,
       waterIntake: waterIntake ?? this.waterIntake,
+      calorieLimit: calorieLimit ?? this.calorieLimit,
     );
   }
 }

@@ -40,23 +40,64 @@ class DataService {
     final logs = await getAllDailyLogs();
     final today = DateTime.now();
     final todayKey = _getDateKey(today);
-    return logs[todayKey] ??
-        DailyLog(date: today, foodEntries: [], waterIntake: 0.0);
+    final profile = await getUserProfile();
+    final calorieLimit = profile?.calorieLimit ?? 2000.0;
+    
+    if (logs[todayKey] != null) {
+      // If log exists, ensure it has the current calorie limit (for today only)
+      final existingLog = logs[todayKey]!;
+      if (existingLog.calorieLimit != calorieLimit) {
+        // Update the limit if it changed (only for today)
+        final updatedLog = existingLog.copyWith(calorieLimit: calorieLimit);
+        logs[todayKey] = updatedLog;
+        await _saveAllLogs(logs);
+        return updatedLog;
+      }
+      return existingLog;
+    }
+    
+    return DailyLog(
+      date: today,
+      foodEntries: [],
+      waterIntake: 0.0,
+      calorieLimit: calorieLimit,
+    );
   }
-
-  Future<void> saveDailyLog(DailyLog log) async {
-    final logs = await getAllDailyLogs();
-    final dateKey = _getDateKey(log.date);
-    logs[dateKey] = log;
+  
+  Future<void> _saveAllLogs(Map<String, DailyLog> logs) async {
     final prefs = await SharedPreferences.getInstance();
     final logsMap = logs.map((key, value) => MapEntry(key, value.toJson()));
     await prefs.setString(_dailyLogsKey, jsonEncode(logsMap));
   }
 
+  Future<void> saveDailyLog(DailyLog log) async {
+    final logs = await getAllDailyLogs();
+    final dateKey = _getDateKey(log.date);
+    final today = DateTime.now();
+    final todayKey = _getDateKey(today);
+    
+    // If saving today's log, ensure it has the current calorie limit
+    // If saving a past day's log, preserve its original limit (don't change it)
+    DailyLog logToSave = log;
+    if (dateKey == todayKey) {
+      final profile = await getUserProfile();
+      final currentLimit = profile?.calorieLimit ?? 2000.0;
+      logToSave = log.copyWith(calorieLimit: currentLimit);
+    }
+    
+    logs[dateKey] = logToSave;
+    await _saveAllLogs(logs);
+  }
+
   Future<void> addFoodEntry(FoodEntry entry) async {
     final todayLog = await getTodayLog();
     final updatedEntries = List<FoodEntry>.from(todayLog.foodEntries)..add(entry);
-    final updatedLog = todayLog.copyWith(foodEntries: updatedEntries);
+    final profile = await getUserProfile();
+    final currentLimit = profile?.calorieLimit ?? 2000.0;
+    final updatedLog = todayLog.copyWith(
+      foodEntries: updatedEntries,
+      calorieLimit: currentLimit,
+    );
     await saveDailyLog(updatedLog);
   }
 
@@ -68,7 +109,12 @@ class DataService {
       }
       return entry;
     }).toList();
-    final updatedLog = todayLog.copyWith(foodEntries: updatedEntries);
+    final profile = await getUserProfile();
+    final currentLimit = profile?.calorieLimit ?? 2000.0;
+    final updatedLog = todayLog.copyWith(
+      foodEntries: updatedEntries,
+      calorieLimit: currentLimit,
+    );
     await saveDailyLog(updatedLog);
   }
 
@@ -77,19 +123,34 @@ class DataService {
     final updatedEntries = todayLog.foodEntries
         .where((entry) => entry.id != entryId)
         .toList();
-    final updatedLog = todayLog.copyWith(foodEntries: updatedEntries);
+    final profile = await getUserProfile();
+    final currentLimit = profile?.calorieLimit ?? 2000.0;
+    final updatedLog = todayLog.copyWith(
+      foodEntries: updatedEntries,
+      calorieLimit: currentLimit,
+    );
     await saveDailyLog(updatedLog);
   }
 
   Future<void> addWater(double liters) async {
     final todayLog = await getTodayLog();
-    final updatedLog = todayLog.copyWith(waterIntake: todayLog.waterIntake + liters);
+    final profile = await getUserProfile();
+    final currentLimit = profile?.calorieLimit ?? 2000.0;
+    final updatedLog = todayLog.copyWith(
+      waterIntake: todayLog.waterIntake + liters,
+      calorieLimit: currentLimit,
+    );
     await saveDailyLog(updatedLog);
   }
 
   Future<void> setWater(double liters) async {
     final todayLog = await getTodayLog();
-    final updatedLog = todayLog.copyWith(waterIntake: liters);
+    final profile = await getUserProfile();
+    final currentLimit = profile?.calorieLimit ?? 2000.0;
+    final updatedLog = todayLog.copyWith(
+      waterIntake: liters,
+      calorieLimit: currentLimit,
+    );
     await saveDailyLog(updatedLog);
   }
 

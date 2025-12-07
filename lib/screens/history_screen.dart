@@ -69,8 +69,6 @@ class HistoryScreenState extends State<HistoryScreen> {
     final sortedDates = _dailyLogs.keys.toList()
       ..sort((a, b) => b.compareTo(a)); // Most recent first
 
-    final calorieLimit = _profile?.calorieLimit ?? 2000.0;
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -105,7 +103,8 @@ class HistoryScreenState extends State<HistoryScreen> {
                     final dateKey = sortedDates[index];
                     final log = _dailyLogs[dateKey]!;
                     final totalCalories = log.totalCalories;
-                    final isExceeded = totalCalories > calorieLimit;
+                    final logCalorieLimit = log.calorieLimit; // Use the limit stored for this day
+                    final isExceeded = totalCalories > logCalorieLimit;
                     final isToday = _formatDate(log.date) == 'Today';
 
                     return Card(
@@ -148,7 +147,7 @@ class HistoryScreenState extends State<HistoryScreen> {
                           children: [
                             const SizedBox(height: 4),
                             Text(
-                              '${totalCalories.toStringAsFixed(0)} / ${calorieLimit.toStringAsFixed(0)} calories',
+                              '${totalCalories.toStringAsFixed(0)} / ${logCalorieLimit.toStringAsFixed(0)} calories',
                               style: TextStyle(
                                 color: isExceeded ? Colors.red : Colors.green,
                                 fontSize: 16,
